@@ -2,7 +2,7 @@
 
 A comprehensive, modern buffer overflow detection and mitigation tool with advanced security features, runtime protection, and automated code analysis.
 
-![Dashboard Screenshot](dashboard.png)
+![Dashboard Screenshot](Dashboard.png)
 
 ## 🚀 Features
 
