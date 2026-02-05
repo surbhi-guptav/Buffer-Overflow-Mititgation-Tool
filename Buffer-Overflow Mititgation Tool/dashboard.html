@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VERBIDUS- Buffer Overflow Mitigation Tool</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --critical-color: #dc2626;
+            --high-color: #ea580c;
+            --medium-color: #d97706;
+            --low-color: #059669;
+            --info-color: #2563eb;
+            --dark-color: #1f2937;
+            --light-bg: #f8fafc;
+        }
+
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .main-header {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .header-subtitle {
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+
+        /* Vulnerability Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            border-left: 5px solid;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .summary-card.critical {
+            border-left-color: var(--critical-color);
+        }
+
+        .summary-card.high {
+            border-left-color: var(--high-color);
+        }
+
+        .summary-card.medium {
+            border-left-color: var(--medium-color);
+        }
+
+        .summary-card.low {
+            border-left-color: var(--low-color);
+        }
+
+        .summary-card.info {
+            border-left-color: var(--info-color);
+        }
+
+        .summary-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            margin: 0 auto 1rem;
+        }
+
+        .summary-icon.critical { background: var(--critical-color); }
+        .summary-icon.high { background: var(--high-color); }
+        .summary-icon.medium { background: var(--medium-color); }
+        .summary-icon.low { background: var(--low-color); }
+        .summary-icon.info { background: var(--info-color); }
+
+        .summary-count {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-card.critical .summary-count { color: var(--critical-color); }
+        .summary-card.high .summary-count { color: var(--high-color); }
+        .summary-card.medium .summary-count { color: var(--medium-color); }
+        .summary-card.low .summary-count { color: var(--low-color); }
+        .summary-card.info .summary-count { color: var(--info-color); }
+
+        /* Code Analysis Section */
+        .analysis-section {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title i {
+            margin-right: 0.75rem;
+            color: var(--info-color);
+        }
+
+        .code-editor {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            border-radius: 15px;
+            padding: 1.5rem;
+            min-height: 250px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .code-editor:focus {
+            outline: none;
+            border-color: var(--info-color);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn-custom {
+            background: linear-gradient(45deg, var(--info-color), #3b82f6);
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            color: white;
+        }
+
+        .btn-outline-custom {
+            border: 2px solid var(--info-color);
+            color: var(--info-color);
+            background: transparent;
+            border-radius: 12px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-custom:hover {
+            background: var(--info-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Vulnerabilities List */
+        .vulnerabilities-section {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .vulnerability-item {
+            background: var(--light-bg);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 5px solid;
+            transition: all 0.3s ease;
+        }
+
+        .vulnerability-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .vulnerability-item.critical { border-left-color: var(--critical-color); }
+        .vulnerability-item.high { border-left-color: var(--high-color); }
+        .vulnerability-item.medium { border-left-color: var(--medium-color); }
+        .vulnerability-item.low { border-left-color: var(--low-color); }
+
+        .vulnerability-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .vulnerability-info {
+            flex: 1;
+        }
+
+        .vulnerability-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .vulnerability-description {
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .vulnerability-meta {
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+
+        .vulnerability-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+        }
+
+        .badge-critical { background: var(--critical-color); }
+        .badge-high { background: var(--high-color); }
+        .badge-medium { background: var(--medium-color); }
+        .badge-low { background: var(--low-color); }
+
+        .vulnerability-actions {
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            border-radius: 8px;
+        }
+
+        /* Risk Level Legend */
+        .risk-legend {
+            background: rgba(255, 255, 255, 0.95);
+            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(20px);
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 1rem;
+        }
+
+        .legend-items {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .legend-color.critical { background: var(--critical-color); }
+        .legend-color.high { background: var(--high-color); }
+        .legend-color.medium { background: var(--medium-color); }
+        .legend-color.low { background: var(--low-color); }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header-title {
+                font-size: 2rem;
+            }
+
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .vulnerability-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .legend-items {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Loading States */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-header fade-in-up">
+            <h1 class="header-title">
+                <i class="fas fa-shield-alt me-3"></i>
+                VERBIDUS
+            </h1>
+            <p class="header-subtitle">Detect and analyze security vulnerabilities in your C++ code</p>
+        </div>
+
+        <div class="risk-legend fade-in-up">
+            <div class="legend-title">
+                <i class="fas fa-info-circle me-2"></i>
+                Risk Level Legend
+            </div>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-color critical"></div>
+                    <span><strong>Critical:</strong> Immediate action required</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color high"></div>
+                    <span><strong>High:</strong> High priority to fix</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color medium"></div>
+                    <span><strong>Medium:</strong> Should be addressed</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color low"></div>
+                    <span><strong>Low:</strong> Minor issue</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="summary-grid fade-in-up">
+            <div class="summary-card critical">
+                <div class="summary-icon critical">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="summary-count" id="criticalCount">0</div>
+                <div class="summary-label">Critical</div>
+            </div>
+            
+            <div class="summary-card high">
+                <div class="summary-icon high">
+                    <i class="fas fa-radiation"></i>
+                </div>
+                <div class="summary-count" id="highCount">0</div>
+                <div class="summary-label">High Risk</div>
+            </div>
+            
+            <div class="summary-card medium">
+                <div class="summary-icon medium">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="summary-count" id="mediumCount">0</div>
+                <div class="summary-label">Medium Risk</div>
+            </div>
+            
+            <div class="summary-card low">
+                <div class="summary-icon low">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+                <div class="summary-count" id="lowCount">0</div>
+                <div class="summary-label">Low Risk</div>
+            </div>
+            
+            <div class="summary-card info">
+                <div class="summary-icon info">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="summary-count" id="totalCount">0</div>
+                <div class="summary-label">Total Issues</div>
+            </div>
+        </div>
+
+        <div class="analysis-section fade-in-up">
+            <h2 class="section-title">
+                <i class="fas fa-code"></i>
+                Multi-Language Code Analysis
+            </h2>
+            
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label for="codeInput" class="form-label fw-bold mb-0">Enter Code for Vulnerability Analysis</label>
+                    <span id="languageIndicator" class="badge bg-info">Detected: C++</span>
+                </div>
+                <textarea class="form-control code-editor" id="codeInput" rows="12" placeholder="Paste your code here to detect vulnerabilities..."></textarea>
+            </div>
+            
+            <div class="d-flex gap-3 flex-wrap">
+                <button class="btn btn-custom" onclick="analyzeCode()">
+                    <i class="fas fa-search me-2"></i>Scan for Vulnerabilities
+                </button>
+                <button class="btn btn-outline-custom" onclick="clearCode()">
+                    <i class="fas fa-trash me-2"></i>Clear Code
+                </button>
+                <button class="btn btn-outline-custom" onclick="loadSample()">
+                    <i class="fas fa-file-code me-2"></i>Load Sample Code
+                </button>
+                <button class="btn btn-outline-custom" onclick="testScan()">
+                    <i class="fas fa-bug me-2"></i>Test Scan
+                </button>
+            </div>
+        </div>
+
+        <div class="vulnerabilities-section fade-in-up">
+            <h2 class="section-title">
+                <i class="fas fa-exclamation-triangle"></i>
+                Vulnerability Analysis
+            </h2>
+            
+            <ul class="nav nav-tabs mb-4" id="vulnerabilityTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="vulnerabilities-tab" data-bs-toggle="tab" data-bs-target="#vulnerabilities" type="button" role="tab">
+                        <i class="fas fa-list me-2"></i>Detected Vulnerabilities
+                        <span id="vulnCount" class="badge bg-danger ms-2">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="details-tab" data-bs-toggle="tab" data-bs-target="#details" type="button" role="tab">
+                        <i class="fas fa-info-circle me-2"></i>Detailed Analysis
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="fixes-tab" data-bs-toggle="tab" data-bs-target="#fixes" type="button" role="tab">
+                        <i class="fas fa-wrench me-2"></i>Security Fixes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="report-tab" data-bs-toggle="tab" data-bs-target="#report" type="button" role="tab">
+                        <i class="fas fa-file-alt me-2"></i>Security Report
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content" id="vulnerabilityTabContent">
+                <div class="tab-pane fade show active" id="vulnerabilities" role="tabpanel">
+                    <div id="vulnerabilitiesList">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-search fa-3x mb-3"></i>
+                            <h4>No vulnerabilities detected yet</h4>
+                            <p>Paste your code above and click "Scan for Vulnerabilities" to begin analysis</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="details" role="tabpanel">
+                    <div id="vulnerabilityDetails">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-info-circle fa-3x mb-3"></i>
+                            <h4>No detailed analysis available</h4>
+                            <p>Scan for vulnerabilities first to see detailed analysis</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="fixes" role="tabpanel">
+                    <div id="securityFixes">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-wrench fa-3x mb-3"></i>
+                            <h4>No security fixes available</h4>
+                            <p>Scan for vulnerabilities first to see recommended fixes</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tab-pane fade" id="report" role="tabpanel">
+                    <div id="securityReport">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-file-alt fa-3x mb-3"></i>
+                            <h4>No security report available</h4>
+                            <p>Scan for vulnerabilities first to generate a security report</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="dashboard.js"></script>
+
+</body>
+</html>
